@@ -1,0 +1,78 @@
+version: 2.1
+
+jobs:
+  install-dependencies:
+    docker:
+      - image: cimg/python:3.12
+    environment:
+      JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
+      SPARK_VERSION: 3.5.1
+      SPARK_HOME: /opt/spark
+      PATH: /opt/spark/bin:/opt/spark/sbin:$PATH
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "requirements.txt" }}
+      - run:
+          name: Install Dependencies
+          command: |
+            pip install flake8 pylint pytest
+            pip install -r requirements.txt
+      - save_cache:
+          paths:
+            - ./venv
+          key: v1-dependencies-{{ checksum "requirements.txt" }}
+
+  check-code-quality:
+    docker:
+      - image: cimg/python:3.12
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "requirements.txt" }}
+      - run:
+          name: Check PEP 8 Compliance
+          command: flake8 pipelines tests
+      # - run:
+      #     name: Run PyLint
+      #     command: pylint 
+
+  # run-unit-tests:
+  #   docker:
+  #     - image: circleci/python:3.7
+  #   steps:
+  #     - checkout
+  #     - restore_cache:
+  #         keys:
+  #           - v1-dependencies-{{ checksum "requirements.txt" }}
+  #     - run:
+  #         name: Update packages and install Java
+  #         command: |
+  #           sudo apt-get update
+  #           sudo apt-get install -y openjdk-11-jre-headless
+  #     - run:
+  #         name: Download and install Spark
+  #         command: |
+  #           curl -fsSL "https://archive.apache.org/dist/spark/spark-$SPARK_VERSION/spark-$SPARK_VERSION-bin-hadoop3.tgz" -o spark.tgz
+  #           tar xzf spark.tgz -C /opt
+  #           sudo mv /opt/spark-$SPARK_VERSION-bin-hadoop3 /opt/spark
+  #           sudo mkdir -p /opt/spark/work-dir
+  #           sudo touch /opt/spark/RELEASE
+  #           rm spark.tgz
+  #     - run:
+  #         name: Run PySpark Unit Tests
+  #         command: pytest tests/
+
+workflows:
+  version: 2
+  build-and-test:
+    jobs:
+      - install-dependencies
+      - check-code-quality:
+          requires:
+            - install-dependencies
+      # - run-unit-tests:
+      #     requires:
+      #       - install-dependencies
