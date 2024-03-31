@@ -10,6 +10,6 @@ def spark_session(request):
         .appName("pytest-spark-testing") \
         .getOrCreate()
 
-    request.addfinalizer(spark.stop())
+    request.addfinalizer(lambda: spark.stop())
 
     return spark

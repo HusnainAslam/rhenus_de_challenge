@@ -3,76 +3,114 @@ version: 2.1
 jobs:
   install-dependencies:
     docker:
-      - image: cimg/python:3.12
-    environment:
-      JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
-      SPARK_VERSION: 3.5.1
-      SPARK_HOME: /opt/spark
-      PATH: /opt/spark/bin:/opt/spark/sbin:$PATH
+      - image: python:3.11-slim-bullseye
     steps:
       - checkout
       - restore_cache:
           keys:
-            - v1-dependencies-{{ checksum "requirements.txt" }}
+            - v3-dependencies-{{ checksum "requirements.txt" }}
       - run:
           name: Install Dependencies
           command: |
-            pip install flake8 pylint pytest
-            pip install -r requirements.txt
+            /usr/local/bin/pip install -r requirements.txt
+      - run:
+          name: Debug information
+          command: |
+            echo $PATH
+            which python
+            which pip
+            python -m pip --version
+            ls /usr/local/lib/python3.11/site-packages/
+            which flake8
+            ls
+            pwd
+      - run:
+          name: Check code quality
+          command: /usr/local/bin/flake8 pipelines tests
       - save_cache:
           paths:
-            - ./venv
-          key: v1-dependencies-{{ checksum "requirements.txt" }}
+            - /usr/local
+          key: v3-dependencies-{{ checksum "requirements.txt" }}
 
-  check-code-quality:
-    docker:
-      - image: cimg/python:3.12
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - v1-dependencies-{{ checksum "requirements.txt" }}
-      - run:
-          name: Check PEP 8 Compliance
-          command: flake8 pipelines tests
-      # - run:
-      #     name: Run PyLint
-      #     command: pylint 
-
-  # run-unit-tests:
+  # check-code-quality:
   #   docker:
-  #     - image: circleci/python:3.7
+  #     - image: python:3.11-slim-bullseye
   #   steps:
   #     - checkout
   #     - restore_cache:
   #         keys:
-  #           - v1-dependencies-{{ checksum "requirements.txt" }}
+  #           - v3-dependencies-{{ checksum "requirements.txt" }}
   #     - run:
-  #         name: Update packages and install Java
+  #         name: Check PEP 8 Compliance
   #         command: |
-  #           sudo apt-get update
-  #           sudo apt-get install -y openjdk-11-jre-headless
+  #           which flake8
+  #           /usr/local/bin/flake8 pipelines tests
+      # - run:
+      #     name: Run PyLint
+      #     command: pylint 
+
+  run-unit-tests:
+    docker:
+      - image: python:3.11-slim-bullseye
+    environment:
+      JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
+      SPARK_VERSION: 3.5.1
+      SPARK_HOME: /opt/spark
+      # PATH: /opt/spark/bin:/opt/spark/sbin:$PATH
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v3-dependencies-{{ checksum "requirements.txt" }}
+      - run:
+          name: Update packages and install Java
+          command: |
+            apt-get update
+            apt-get install -y openjdk-11-jre-headless
+      - run:
+          name: Download and install Spark
+          command: |
+            apt-get install -y curl
+            curl -fsSL "https://archive.apache.org/dist/spark/spark-$SPARK_VERSION/spark-$SPARK_VERSION-bin-hadoop3.tgz" -o spark.tgz
+            tar xzf spark.tgz -C /opt
+            mv /opt/spark-$SPARK_VERSION-bin-hadoop3 /opt/spark
+            mkdir -p /opt/spark/work-dir
+            touch /opt/spark/RELEASE
+            rm spark.tgz
+      - run:
+          name: Append spark path to PATH
+          command: echo 'export PATH=/opt/spark/bin:/opt/spark/sbin:$PATH' >> $BASH_ENV
+      - run:
+          name: Run PySpark Unit Tests
+          command: |
+            export PYTHONPATH=".:$PYTHONPATH"
+            /usr/local/bin/pytest tests/
+  
+  # run-unit-tests:
+  #   docker:
+  #     - image: spark
+  #   steps:
+  #     - checkout
+  #     - restore_cache:
+  #         keys:
+  #           - v3-dependencies-{{ checksum "requirements.txt" }}
   #     - run:
-  #         name: Download and install Spark
+  #         name: DEBUG
   #         command: |
-  #           curl -fsSL "https://archive.apache.org/dist/spark/spark-$SPARK_VERSION/spark-$SPARK_VERSION-bin-hadoop3.tgz" -o spark.tgz
-  #           tar xzf spark.tgz -C /opt
-  #           sudo mv /opt/spark-$SPARK_VERSION-bin-hadoop3 /opt/spark
-  #           sudo mkdir -p /opt/spark/work-dir
-  #           sudo touch /opt/spark/RELEASE
-  #           rm spark.tgz
+  #           which python
+  #           ls /usr/local/bin
   #     - run:
   #         name: Run PySpark Unit Tests
-  #         command: pytest tests/
+  #         command: /usr/local/bin/pytest tests/
 
 workflows:
   version: 2
   build-and-test:
     jobs:
       - install-dependencies
-      - check-code-quality:
-          requires:
-            - install-dependencies
-      # - run-unit-tests:
+      # - check-code-quality:
       #     requires:
       #       - install-dependencies
+      - run-unit-tests:
+          requires:
+            - install-dependencies
