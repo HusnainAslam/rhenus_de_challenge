@@ -30,24 +30,7 @@ jobs:
       - save_cache:
           paths:
             - /usr/local
-          key: v3-dependencies-{{ checksum "requirements.txt" }}
-
-  # check-code-quality:
-  #   docker:
-  #     - image: python:3.11-slim-bullseye
-  #   steps:
-  #     - checkout
-  #     - restore_cache:
-  #         keys:
-  #           - v3-dependencies-{{ checksum "requirements.txt" }}
-  #     - run:
-  #         name: Check PEP 8 Compliance
-  #         command: |
-  #           which flake8
-  #           /usr/local/bin/flake8 pipelines tests
-      # - run:
-      #     name: Run PyLint
-      #     command: pylint 
+          key: v3-dependencies-{{ checksum "requirements.txt" }} 
 
   run-unit-tests:
     docker:
@@ -85,32 +68,12 @@ jobs:
           command: |
             export PYTHONPATH=".:$PYTHONPATH"
             /usr/local/bin/pytest tests/
-  
-  # run-unit-tests:
-  #   docker:
-  #     - image: spark
-  #   steps:
-  #     - checkout
-  #     - restore_cache:
-  #         keys:
-  #           - v3-dependencies-{{ checksum "requirements.txt" }}
-  #     - run:
-  #         name: DEBUG
-  #         command: |
-  #           which python
-  #           ls /usr/local/bin
-  #     - run:
-  #         name: Run PySpark Unit Tests
-  #         command: /usr/local/bin/pytest tests/
 
 workflows:
   version: 2
   build-and-test:
     jobs:
       - install-dependencies
-      # - check-code-quality:
-      #     requires:
-      #       - install-dependencies
       - run-unit-tests:
           requires:
             - install-dependencies
