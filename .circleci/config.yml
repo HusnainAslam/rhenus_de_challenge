@@ -13,24 +13,23 @@ jobs:
           name: Install Dependencies
           command: |
             /usr/local/bin/pip install -r requirements.txt
-      - run:
-          name: Debug information
-          command: |
-            echo $PATH
-            which python
-            which pip
-            python -m pip --version
-            ls /usr/local/lib/python3.11/site-packages/
-            which flake8
-            ls
-            pwd
-      - run:
-          name: Check code quality
-          command: /usr/local/bin/flake8 pipelines tests
       - save_cache:
           paths:
             - /usr/local
           key: v3-dependencies-{{ checksum "requirements.txt" }} 
+
+  check-code-quality:
+    docker:
+      - image: python:3.11-slim-bullseye
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v3-dependencies-{{ checksum "requirements.txt" }}
+      - run:
+          name: Check PEP 8 Compliance
+          command: |
+            /usr/local/bin/flake8 pipelines tests
 
   run-unit-tests:
     docker:
@@ -39,7 +38,6 @@ jobs:
       JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
       SPARK_VERSION: 3.5.1
       SPARK_HOME: /opt/spark
-      # PATH: /opt/spark/bin:/opt/spark/sbin:$PATH
     steps:
       - checkout
       - restore_cache:
@@ -74,6 +72,9 @@ workflows:
   build-and-test:
     jobs:
       - install-dependencies
+      - check-code-quality:
+          requires:
+            - install-dependencies
       - run-unit-tests:
           requires:
             - install-dependencies

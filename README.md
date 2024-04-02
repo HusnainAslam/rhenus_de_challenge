@@ -3,27 +3,57 @@
 ## Task1: Spark Pipeline
 
 ### To Run Pipeline
-Make sure docker is installed in your system. Navigate to project root directory.\
-Run following command to create docker image run. Replace IMAGE-NAME with your desire name \
-`sudo docker build -t IMAGE-NAME`
 
-To run jupyter notebook run following command\
-`docker run -p 8888:8888 IMAGE-NAME`
 
-To save changes made in notebooks to your local system run\
-`docker run -p 8888:8888 -v $(pwd)/notebooks:/app/notebooks IMAGE-NAME`
+Ensure Docker is installed on your system. Begin by navigating to the root directory of your project.
 
-To run spark job directly, open terminal from jupyter home and run\
-`python pipelines/spark_pipeline/spark_event_analysis.py`
+### Creating a Docker Image
 
-To run Test\
-`pytest tests/`
+Execute the command below to build your Docker image. Remember to replace `IMAGE-NAME` with a name of your choosing:
+
+```sh
+sudo docker build -t IMAGE-NAME .
+```
+
+### Starting a Jupyter Notebook
+
+To launch a Jupyter notebook, use the following command:
+
+```sh
+docker run -p 8888:8888 IMAGE-NAME
+```
+
+### Persisting Notebook Changes
+
+If you wish to preserve changes made in your notebooks locally, initiate the notebook using this command:
+
+```sh
+docker run -p 8888:8888 -v $(pwd)/notebooks:/app/notebooks IMAGE-NAME
+```
+
+This mounts the local `notebooks` directory to `/app/notebooks` within the container, ensuring that any modifications are saved to your local system.
+
+### Running a Spark Job
+
+To execute a Spark job directly, access the terminal from the Jupyter homepage and execute:
+
+```sh
+python pipelines/spark_pipeline/spark_event_analysis.py
+```
+
+### Running Tests
+
+For executing tests, simply run:
+
+```sh
+pytest tests/
+```
 
 
 ### CircleCI
 CircleCI is integrated with repo and perform
-* Code Quality check using flake8
-* Run unit Test \
+* Conduct code quality check using flake8
+* Execute unit Test <br>
 *** Additionaly creating docker image/Artifact and pushing it to cloud and delpoyment steps can be included for production.
 
 > *Note: This spark job/code is not for production. It just provides abstract way of working.*
@@ -43,3 +73,6 @@ When it comes to TBs of data we can consider scaling out efficiently, Incrementa
 * **Cluster Management:** Properly size the Spark cluster and enable auto-scaling if necessary.
 * **Security:** Enforce data encryption, access control, and comply with regulations.
 * **Documentation and Training:** Maintain clear documentation and train the team on operational procedures.
+<br><br>
+> ## **[Task2: ETL Challenge](ETLChallenge.md)**<br><br>
+> ## **[Task3: Data Pipeline Challenge](DataPipelineChallenge.md)**
